@@ -22,8 +22,8 @@ import 'package:xmpp_stone/src/roster/RosterManager.dart';
 import 'package:xmpp_stone/xmpp_stone.dart';
 
 import 'connection/XmppWebsocketApi.dart'
-  if (dart.library.io) 'connection/XmppWebsocketIo.dart'
-  if (dart.library.html) 'connection/XmppWebsocketHtml.dart' as xmppSocket;
+    if (dart.library.io) 'connection/XmppWebsocketIo.dart'
+    if (dart.library.html) 'connection/XmppWebsocketHtml.dart' as xmppSocket;
 
 import 'logger/Log.dart';
 
@@ -151,7 +151,14 @@ class Connection {
   }
 
   void _openStream() {
-    var streamOpeningString = """
+    var streamOpeningString =
+        (_socket.runtimeType.toString() == 'XmppWebSocketHtml')
+            ? """
+<open xmlns="urn:ietf:params:xml:ns:xmpp-framing"
+             to='${fullJid.domain}'
+             version="1.0" />
+"""
+            : """
 <?xml version='1.0'?>
 <stream:stream xmlns='jabber:client' version='1.0' xmlns:stream='http://etherx.jabber.org/streams'
 to='${fullJid.domain}'
@@ -208,16 +215,17 @@ xml:lang='en'
     connectionNegotatiorManager.init();
     setState(XmppConnectionState.SocketOpening);
     try {
-
       var socket = xmppSocket.createSocket();
 
-      return await socket.connect(account.host ?? account.domain, account.port, map: prepareStreamResponse).then((socket) {
+      return await socket
+          .connect(account.host ?? account.domain, account.port,
+              map: prepareStreamResponse)
+          .then((socket) {
         // if not closed in meantime
         if (_state != XmppConnectionState.Closed) {
           setState(XmppConnectionState.SocketOpened);
           _socket = socket;
-          socket
-              .listen(handleResponse, onDone: handleConnectionDone);
+          socket.listen(handleResponse, onDone: handleConnectionDone);
           _openStream();
         } else {
           Log.d(TAG, 'Closed in meantime');
@@ -251,10 +259,10 @@ xml:lang='en'
 
   /// Dispose of the connection so stops all activities and cannot be re-used.
   /// For the connection to be garbage collected.
-  /// 
+  ///
   /// If the Connection instance was created with [getInstance],
   /// you must also call [Connection.removeInstance] after calling [dispose].
-  /// 
+  ///
   /// If you intend to re-use the connection later, consider just calling [close] instead.
   void dispose() {
     close();
@@ -405,9 +413,10 @@ xml:lang='en'
   void startSecureSocket() {
     Log.d(TAG, 'startSecureSocket');
 
-    _socket!.secure(onBadCertificate: _validateBadCertificate).
-        then((secureSocket) {
-          if(secureSocket == null) return;
+    _socket!
+        .secure(onBadCertificate: _validateBadCertificate)
+        .then((secureSocket) {
+      if (secureSocket == null) return;
 
       secureSocket
           .cast<List<int>>()
