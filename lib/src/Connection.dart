@@ -141,7 +141,31 @@ class Connection {
 
   ReconnectionManager? reconnectionManager;
 
-  Connection(this.account) {
+  /// Define if the connection requires to use STARTTLS.
+  ///
+  /// In websockets this flag is ignored because TLS has to be used at the
+  /// websocket layer as described in:
+  /// https://datatracker.ietf.org/doc/html/rfc7395#section-3.9
+  final bool useTLS;
+
+  /// Scheme of the connection URL
+  ///
+  /// Used in Websocket connections and usually is 'ws' for unsecured and 'wss'
+  /// for secured websocket connections.
+  final String? scheme;
+
+  /// Path of the connection URL
+  ///
+  /// Used in Websocket connections when the server has a specific path configured
+  /// for the websocket url.
+  final String? path;
+
+  Connection(
+    this.account, {
+    this.useTLS = false,
+    this.path,
+    this.scheme,
+  }) {
     RosterManager.getInstance(this);
     PresenceManager.getInstance(this);
     MessageHandler.getInstance(this);
@@ -151,14 +175,13 @@ class Connection {
   }
 
   void _openStream() {
-    var streamOpeningString =
-        (_socket.runtimeType.toString() == 'XmppWebSocketHtml')
-            ? """
+    var streamOpeningString = (xmppSocket.isWeb())
+        ? """
 <open xmlns="urn:ietf:params:xml:ns:xmpp-framing"
              to='${fullJid.domain}'
              version="1.0" />
 """
-            : """
+        : """
 <?xml version='1.0'?>
 <stream:stream xmlns='jabber:client' version='1.0' xmlns:stream='http://etherx.jabber.org/streams'
 to='${fullJid.domain}'
@@ -218,8 +241,13 @@ xml:lang='en'
       var socket = xmppSocket.createSocket();
 
       return await socket
-          .connect(account.host ?? account.domain, account.port,
-              map: prepareStreamResponse)
+          .connect(
+        account.host ?? account.domain,
+        account.port,
+        map: prepareStreamResponse,
+        scheme: this.scheme,
+        path: this.path,
+      )
           .then((socket) {
         // if not closed in meantime
         if (_state != XmppConnectionState.Closed) {
@@ -469,8 +497,16 @@ xml:lang='en'
     return true;
   }
 
+  /// StartTLS is not used in WebSockets because security depends on HTTPS
+  /// being used in the connection itself.
+  ///
+  /// In regular Sockets it will depend on user configuration.
   bool isTlsRequired() {
-    return xmppSocket.isTlsRequired();
+    if (xmppSocket.isWeb()) {
+      return false;
+    } else {
+      return useTLS;
+    }
   }
 
   void handleConnectionDone() {
