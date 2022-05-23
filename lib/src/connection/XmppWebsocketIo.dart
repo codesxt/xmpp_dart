@@ -57,11 +57,19 @@ class XmppWebSocketIo extends XmppWebSocket {
   }
 
   @override
-  Future<SecureSocket?> secure(
-      {host,
-      SecurityContext? context,
-      bool Function(X509Certificate certificate)? onBadCertificate,
-      List<String>? supportedProtocols}) {
-    return SecureSocket.secure(_socket!, onBadCertificate: onBadCertificate);
+  Future<SecureSocket?> secure({
+    host,
+    SecurityContext? context,
+    bool Function(X509Certificate certificate)? onBadCertificate,
+    List<String>? supportedProtocols,
+  }) async {
+    SecureSocket socket = await SecureSocket.secure(
+      _socket!,
+      onBadCertificate: onBadCertificate,
+    );
+    // Overwrite previous socket, since calling SecureSocket.secure makes
+    // previous socket unusable.
+    _socket = socket;
+    return socket;
   }
 }
