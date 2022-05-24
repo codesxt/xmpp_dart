@@ -24,18 +24,19 @@ class XmppWebSocketHtml extends XmppWebSocket {
   Future<XmppWebSocket> connect<S>(
     String host,
     int port, {
-    String? path,
+    String? path = 'ws',
     String? scheme = 'wss',
     String Function(String event)? map,
   }) {
-    print('[XmppWebSocketHtml][connect] host: $host, port: $port, path: $path');
+    Uri uri = Uri(
+      scheme: scheme,
+      host: host,
+      port: port,
+      path: path,
+    );
+    print('[XmppWebSocketHtml][connect] uri: $uri');
     _socket = WebSocketChannel.connect(
-      Uri(
-        scheme: scheme,
-        host: host,
-        port: port,
-        path: path,
-      ),
+      uri,
       protocols: ['xmpp'],
     );
 
