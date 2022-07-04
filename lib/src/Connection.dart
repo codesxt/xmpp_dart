@@ -350,7 +350,17 @@ xml:lang='en'
     if (fullResponse.isNotEmpty) {
       xml.XmlNode? xmlResponse;
       try {
-        xmlResponse = xml.XmlDocument.parse(fullResponse).firstChild;
+        // Parche temporal porque xmpp_stone envuelve todo en un nodo raíz
+        // <xmpp_stone> pero esto provoca que cuando haya una declaración
+        // (e.g. <?xml version='1.0'?>), se arroje un error porque las declaraciones
+        // deberían ser de nivel superior. Para evitar ese problema, si existe declaración,
+        // Se elimina el tag superior para que no haya problema al parsear.
+        if (fullResponse.contains('<?xml')) {
+          fullResponse = fullResponse.replaceAll(RegExp(r'<xmpp_stone>'), '');
+          fullResponse = fullResponse.replaceAll(RegExp(r'</xmpp_stone>'), '');
+        }
+        xml.XmlDocument parsed = xml.XmlDocument.parse(fullResponse);
+        xmlResponse = parsed.firstElementChild;
       } catch (e) {
         _unparsedXmlResponse += fullResponse.substring(
             0, fullResponse.length - 13); //remove  xmpp_stone end tag
@@ -365,7 +375,7 @@ xml:lang='en'
           .where((element) => startMatcher(element))
           .forEach((element) => processInitialStream(element));
 
-      xmlResponse.children
+      xmlResponse.childElements
           .whereType<xml.XmlElement>()
           .where((element) => stanzaMatcher(element))
           .map((xmlElement) => StanzaParser.parseStanza(xmlElement))
