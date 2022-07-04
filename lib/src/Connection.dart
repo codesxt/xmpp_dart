@@ -276,7 +276,12 @@ xml:lang='en'
       if (_socket != null) {
         try {
           setState(XmppConnectionState.Closing);
-          _socket!.write('</stream:stream>');
+          if (xmppSocket.isWeb()) {
+            _socket!
+                .write('<close xmlns="urn:ietf:params:xml:ns:xmpp-framing" />');
+          } else {
+            _socket!.write('</stream:stream>');
+          }
         } on Exception {
           Log.d(TAG, 'Socket already closed');
         }
